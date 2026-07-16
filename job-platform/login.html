@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log In | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- cd job-platform        //////     py -m http.server 8000 /////http://localhost:8000/login.html-->
+
+
+<div class="auth-wrap">
+  <div class="auth-card fade-up">
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <div class="auth-head">
+      <h2>Welcome back</h2>
+      <p>Log in to continue to your dashboard</p>
+    </div>
+
+    <div id="loginAlert" class="alert-inline error" style="display:none;">
+      <i class="fa-solid fa-circle-exclamation"></i><span>Please enter a valid email and password.</span>
+    </div>
+
+    <form id="loginForm" novalidate>
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-envelope"></i>
+          <input type="email" id="email" class="form-control" placeholder="you@example.com" required>
+        </div>
+        <div class="form-error">Enter a valid email address.</div>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-lock"></i>
+          <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
+          <button type="button" class="toggle-pass"><i class="fa-solid fa-eye"></i></button>
+        </div>
+        <div class="form-error">Password is required.</div>
+      </div>
+      <div class="remember-row">
+        <label class="check-row"><input type="checkbox"> Remember me</label>
+        <a href="#" id="forgotLink" style="color:var(--blue-accent);font-weight:600;">Forgot Password?</a>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="loginBtn">Log In</button>
+    </form>
+
+    <div class="divider-text">OR</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="btn btn-ghost btn-block"><i class="fa-brands fa-google"></i> Continue with Google</button>
+      <button class="btn btn-ghost btn-block"><i class="fa-brands fa-linkedin"></i> Continue with LinkedIn</button>
+    </div>
+
+    <div class="auth-foot">Don't have an account? <a href="register.html" style="color:var(--blue-accent);font-weight:600;">Register</a></div>
+  </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div class="modal-overlay" id="forgotModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Reset your password</h3><button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <p style="margin-bottom:16px;">Enter your email address and we'll send you a link to reset your password.</p>
+      <div class="form-group">
+        <label for="resetEmail">Email Address</label>
+        <div class="input-wrap"><i class="fa-solid fa-envelope"></i><input type="email" id="resetEmail" class="form-control" placeholder="you@example.com"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn btn-primary" id="sendResetBtn">Send Reset Link</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  document.getElementById('forgotLink').addEventListener('click', e=>{ e.preventDefault(); openModal('forgotModal'); });
+  document.getElementById('sendResetBtn').addEventListener('click', async ()=>{
+    const email = document.getElementById('resetEmail').value.trim();
+    if(!email){ showToast('Enter your email address first.', 'error'); return; }
+    closeModal('forgotModal');
+    try{
+      await Auth.sendPasswordReset(email);
+      showToast('Password reset link sent to your email.', 'success');
+    }catch(err){
+      showToast(err.message || 'Could not send reset link.', 'error');
+    }
+  });
+
+  document.querySelectorAll('.usertype-option').forEach(opt=>{
+    opt.addEventListener('click', ()=>{
+      document.querySelectorAll('.usertype-option').forEach(o=>o.classList.remove('selected'));
+      opt.classList.add('selected');
+      opt.querySelector('input').checked = true;
+    });
+  });
+
+  document.getElementById('loginForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    const emailGroup = document.getElementById('email').closest('.form-group');
+    const passGroup = document.getElementById('password').closest('.form-group');
+    const email = document.getElementById('email').value.trim();
+    const pass = document.getElementById('password').value.trim();
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    let ok = true;
+    document.getElementById('loginAlert').style.display = 'none';
+    if(!emailValid){ setFieldError(emailGroup, 'Enter a valid email address.'); ok = false; } else clearFieldError(emailGroup);
+    if(!pass){ setFieldError(passGroup, 'Password is required.'); ok = false; } else clearFieldError(passGroup);
+    if(!ok){ document.getElementById('loginAlert').style.display = 'flex'; return; }
+
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-inline"></span> Logging in...';
+
+    try{
+      await Auth.login({ email, password: pass });
+      const profile = await Auth.currentProfile();
+      if(!profile){ throw new Error('Could not load your profile.'); }
+
+      const destination = profile.role === 'employer' ? 'employer-dashboard.html' : 'seeker-dashboard.html';
+      setCurrentRole(profile.role); /* remember which portal this session belongs to, based on the DB role, not the radio button */
+
+      showToast('Login successful! Redirecting...', 'success');
+      setTimeout(()=>{ window.location.href = destination; }, 900);
+    }catch(err){
+      document.getElementById('loginAlert').querySelector('span').textContent = err.message || 'Invalid email or password.';
+      document.getElementById('loginAlert').style.display = 'flex';
+      btn.disabled = false; btn.innerHTML = 'Log In';
+    }
+  });
+</script>
+</body>
+</html>

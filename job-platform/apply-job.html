@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apply for Job | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="navbar">
+  <div class="container">
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="search-jobs.html">Find Jobs</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div class="nav-actions">
+      <a href="login.html" class="btn btn-outline-light btn-sm">Log In</a>
+      <a href="register.html" class="btn btn-accent btn-sm">Register</a>
+    </div>
+    <button class="nav-toggle"><i class="fa-solid fa-bars"></i></button>
+  </div>
+</header>
+
+<section class="section" style="padding-top:56px;">
+  <div class="container" style="max-width:640px;">
+    <div class="section-head" style="margin-bottom:32px;">
+      <span class="eyebrow">Apply for</span>
+      <h2 id="applyJobTitle">Job Title</h2>
+      <p id="applyJobCompany"></p>
+    </div>
+
+    <div class="panel">
+      <form id="applyForm" novalidate>
+        <div class="form-group">
+          <label>Upload CV / Resume</label>
+          <div class="upload-box" id="uploadBox">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <p><strong>Click to upload</strong> or drag and drop</p>
+            <p class="form-hint">PDF, DOC or DOCX (max 5MB)</p>
+            <div class="upload-filename" id="uploadFilename"></div>
+            <input type="file" id="cvInput" accept=".pdf,.doc,.docx" style="display:none;" required>
+          </div>
+          <div class="form-error" id="cvError" style="display:none;">Please upload your CV.</div>
+        </div>
+
+        <div class="form-group">
+          <label for="coverLetter">Cover Letter</label>
+          <textarea id="coverLetter" class="form-control" placeholder="Tell the employer why you're a great fit for this role..." style="min-height:180px;" required></textarea>
+          <div class="form-error">Cover letter is required.</div>
+        </div>
+
+        <div style="display:flex;gap:14px;margin-top:8px;">
+          <button type="submit" class="btn btn-primary" id="submitAppBtn"><i class="fa-solid fa-paper-plane"></i> Submit Application</button>
+          <a href="job-details.html" class="btn btn-ghost">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container"><div class="footer-bottom">&copy; 2026 JobMatch. All rights reserved.</div></div>
+</footer>
+
+<!-- Success Modal -->
+<div class="modal-overlay" id="successModal">
+  <div class="modal">
+    <div class="modal-body" style="text-align:center;padding:40px 24px;">
+      <div style="width:64px;height:64px;border-radius:50%;background:var(--success-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">
+        <i class="fa-solid fa-check" style="font-size:1.6rem;color:var(--success);"></i>
+      </div>
+      <h3>Application Submitted!</h3>
+      <p class="mt-8">Your application has been sent to the employer. You can track its status from your dashboard.</p>
+      <a href="seeker-dashboard.html" class="btn btn-primary btn-block mt-24">Go to Dashboard</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  let currentSeeker = null;
+  let job = null;
+
+  (async function init(){
+    const params = new URLSearchParams(location.search);
+    const id = Number(params.get('id'));
+    if(!id){ showToast('No job specified.', 'error'); return; }
+
+    try{
+      job = await Jobs.getById(id);
+      document.getElementById('applyJobTitle').textContent = job.title;
+      document.getElementById('applyJobCompany').textContent = `${job.employer_profiles?.company_name || 'Employer'} • ${job.location}`;
+    }catch(err){
+      showToast('This job could not be found.', 'error');
+      return;
+    }
+
+    currentSeeker = await Auth.currentProfile();
+    if(!currentSeeker){
+      showToast('Please log in as a job seeker to apply.', 'warning');
+      setTimeout(()=> window.location.href = `login.html?next=apply-job.html?id=${id}`, 1200);
+      return;
+    }
+    if(currentSeeker.role !== 'seeker'){
+      showToast('Only job seeker accounts can apply to jobs.', 'error');
+      return;
+    }
+
+    try{
+      const already = await Applications.hasApplied(job.id, currentSeeker.id);
+      if(already){
+        showToast("You've already applied to this job.", 'warning');
+        document.getElementById('submitAppBtn').disabled = true;
+      }
+    }catch(err){ /* non-fatal */ }
+  })();
+
+  const uploadBox = document.getElementById('uploadBox');
+  const cvInput = document.getElementById('cvInput');
+  const filenameEl = document.getElementById('uploadFilename');
+  uploadBox.addEventListener('click', ()=> cvInput.click());
+  ['dragover','dragenter'].forEach(evt=> uploadBox.addEventListener(evt, e=>{ e.preventDefault(); uploadBox.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(evt=> uploadBox.addEventListener(evt, e=>{ e.preventDefault(); uploadBox.classList.remove('drag'); }));
+  uploadBox.addEventListener('drop', e=>{
+    if(e.dataTransfer.files.length){ cvInput.files = e.dataTransfer.files; showFilename(); }
+  });
+  cvInput.addEventListener('change', showFilename);
+  function showFilename(){
+    if(cvInput.files.length){
+      const file = cvInput.files[0];
+      if(file.size > 5 * 1024 * 1024){
+        showToast('File is too large — max 5MB.', 'error');
+        cvInput.value = '';
+        return;
+      }
+      filenameEl.style.display='block';
+      filenameEl.innerHTML = `<i class="fa-solid fa-file-lines"></i> ${file.name}`;
+      document.getElementById('cvError').style.display='none';
+    }
+  }
+
+  document.getElementById('applyForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    if(!job || !currentSeeker) return;
+
+    let ok = true;
+    if(!cvInput.files.length){ document.getElementById('cvError').style.display='block'; ok=false; }
+    const coverGroup = document.getElementById('coverLetter').closest('.form-group');
+    if(!document.getElementById('coverLetter').value.trim()){ setFieldError(coverGroup, 'Cover letter is required.'); ok=false; }
+    else clearFieldError(coverGroup);
+    if(!ok){ showToast('Please complete all required fields.', 'error'); return; }
+
+    const btn = document.getElementById('submitAppBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-inline"></span> Submitting...';
+
+    try{
+      const resumePath = await Storage.uploadResume(currentSeeker.id, cvInput.files[0]);
+      await Applications.apply({
+        jobId: job.id,
+        seekerId: currentSeeker.id,
+        coverLetter: document.getElementById('coverLetter').value.trim(),
+        resumeUrl: resumePath
+      });
+      openModal('successModal');
+    }catch(err){
+      showToast(err.message || 'Could not submit application.', 'error');
+      btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Application';
+    }
+  });
+</script>
+</body>
+</html>

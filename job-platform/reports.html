@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <button class="sidebar-close"><i class="fa-solid fa-xmark"></i></button>
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <nav class="side-nav">
+      <a href="employer-dashboard.html"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="post-job.html"><i class="fa-solid fa-circle-plus"></i> Post Job</a>
+      <a href="manage-jobs.html"><i class="fa-solid fa-briefcase"></i> Manage Jobs</a>
+      <a href="employer-applications.html"><i class="fa-solid fa-file-lines"></i> View Applications</a>
+      <a href="messages.html"><i class="fa-solid fa-comments"></i> Messages</a>
+      <a href="reports.html" class="active"><i class="fa-solid fa-chart-pie"></i> Reports</a>
+      <div class="side-divider"></div>
+      <a href="employer-profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+      <a href="index.html"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </nav>
+  </aside>
+  <div class="overlay"></div>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left"><button class="sidebar-toggle"><i class="fa-solid fa-bars"></i></button><h2>Reports</h2></div>
+      <div class="topbar-right">
+        <div class="chat-wrap">
+          <button class="icon-btn" id="chatBtn"><i class="fa-regular fa-comment-dots"></i><span class="dot"></span></button>
+          <div class="chat-dropdown" id="chatDropdown">
+            <div class="notif-head">Messages <span class="chat-count">0 new</span></div>
+            <div class="chat-list-preview"></div>
+            <a href="messages.html" class="notif-viewall">Open Messages</a>
+          </div>
+        </div>
+        <div class="notif-wrap">
+          <button class="icon-btn" id="notifBtn"><i class="fa-regular fa-bell"></i><span class="dot"></span></button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-head">Notifications <span class="notif-count">0 new</span></div>
+            <div class="notif-list"></div>
+            <a href="notifications.html" class="notif-viewall">View all notifications</a>
+          </div>
+        </div>
+        <button class="btn btn-accent btn-sm" id="genReportBtn"><i class="fa-solid fa-file-arrow-down"></i> Generate Report</button>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="stat-cards">
+        <a href="manage-jobs.html" class="stat-card"><div class="icon-box blue"><i class="fa-solid fa-briefcase"></i></div><div><div class="num" id="repTotalJobs">—</div><div class="label">Total Jobs Posted</div></div></a>
+        <a href="employer-applications.html" class="stat-card"><div class="icon-box accent"><i class="fa-solid fa-file-lines"></i></div><div><div class="num" id="repTotalApps">—</div><div class="label">Total Applications</div></div></a>
+        <a href="employer-applications.html?status=Accepted" class="stat-card"><div class="icon-box green"><i class="fa-solid fa-handshake"></i></div><div><div class="num" id="repHires">—</div><div class="label">Successful Hires</div></div></a>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>Monthly Applications</h3></div>
+        <div class="chart-panel">
+          <div class="bars" id="monthBars"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>Jobs by Category</h3></div>
+        <div class="chart-panel">
+          <div class="donut-wrap">
+            <svg width="180" height="180" viewBox="0 0 42 42" id="donutSvg"></svg>
+            <div id="donutLegend"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="reportModal">
+  <div class="modal">
+    <div class="modal-body" style="text-align:center;padding:40px 24px;">
+      <div style="width:64px;height:64px;border-radius:50%;background:var(--success-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">
+        <i class="fa-solid fa-check" style="font-size:1.6rem;color:var(--success);"></i>
+      </div>
+      <h3>Report Generated</h3>
+      <p class="mt-8">Your recruitment report has been compiled and is ready for download.</p>
+      <button class="btn btn-primary btn-block mt-24" data-close-modal>Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  function renderMonthlyApplications(apps){
+    // Build the last 6 calendar months (oldest first) and count real
+    // applications received in each one.
+    const now = new Date();
+    const buckets = [];
+    for(let i = 5; i >= 0; i--){
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      buckets.push({ label: d.toLocaleString('default', {month:'short'}), year: d.getFullYear(), month: d.getMonth(), count: 0 });
+    }
+    apps.forEach(a=>{
+      const d = new Date(a.applied_at);
+      const bucket = buckets.find(b => b.year === d.getFullYear() && b.month === d.getMonth());
+      if(bucket) bucket.count++;
+    });
+
+    const max = Math.max(1, ...buckets.map(b=>b.count));
+    document.getElementById('monthBars').innerHTML = buckets.map(b=>`
+      <div class="bar-col">
+        <span class="bl">${b.count}</span>
+        <div class="bar" style="height:${(b.count/max*100)}%"></div>
+        <span class="bl">${b.label}</span>
+      </div>`).join('');
+  }
+
+  const palette = ['#2C74B3','#144272','#8FC1E8','#0A2647','#5B9BD5','#1E5F8C'];
+
+  function renderDonut(categories){
+    const total = categories.reduce((s,c)=>s+c.val,0) || 1;
+    let offset = 0;
+    const svg = document.getElementById('donutSvg');
+    svg.innerHTML = '';
+    categories.forEach(c=>{
+      const pct = c.val/total*100;
+      const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circle.setAttribute('cx','21'); circle.setAttribute('cy','21'); circle.setAttribute('r','15.9');
+      circle.setAttribute('fill','transparent'); circle.setAttribute('stroke', c.color); circle.setAttribute('stroke-width','7');
+      circle.setAttribute('stroke-dasharray', `${pct} ${100-pct}`);
+      circle.setAttribute('stroke-dashoffset', 25 - offset);
+      svg.appendChild(circle);
+      offset += pct;
+    });
+    document.getElementById('donutLegend').innerHTML = categories.map(c=>`
+      <div class="legend-row"><span class="legend-dot" style="background:${c.color}"></span>${c.label} (${c.val})</div>`).join('');
+  }
+
+  document.getElementById('genReportBtn').addEventListener('click', ()=>{
+    withSpinner(()=> openModal('reportModal'), 1000);
+  });
+
+  (async function init(){
+    const employer = await requireRole('employer');
+    if(!employer) return;
+
+    let jobs = [];
+    try{
+      jobs = await Jobs.allEverPosted(employer.id);
+      document.getElementById('repTotalJobs').textContent = jobs.length;
+
+      const byCategory = {};
+      jobs.forEach(j => { byCategory[j.category] = (byCategory[j.category]||0) + 1; });
+      const categories = Object.entries(byCategory).map(([label,val],i) => ({label, val, color: palette[i % palette.length]}));
+      renderDonut(categories.length ? categories : [{label:'No jobs yet', val:1, color:'#8FC1E8'}]);
+    }catch(err){ showToast('Could not load your jobs.', 'error'); }
+
+    try{
+      const apps = await Applications.forEmployer(employer.id);
+      document.getElementById('repTotalApps').textContent = apps.length;
+      document.getElementById('repHires').textContent = apps.filter(a=>a.status==='Accepted').length;
+      renderMonthlyApplications(apps);
+    }catch(err){
+      showToast('Could not load application data.', 'error');
+      renderMonthlyApplications([]);
+    }
+
+    renderChatDropdown('employer');
+  })();
+</script>
+</body>
+</html>

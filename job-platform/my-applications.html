@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Applications | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <button class="sidebar-close"><i class="fa-solid fa-xmark"></i></button>
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <nav class="side-nav">
+      <a href="seeker-dashboard.html"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="search-jobs.html"><i class="fa-solid fa-magnifying-glass"></i> Search Jobs</a>
+      <a href="my-applications.html" class="active"><i class="fa-solid fa-file-lines"></i> Applications</a>
+      <a href="messages.html"><i class="fa-solid fa-comments"></i> Messages</a>
+      <a href="saved-jobs.html"><i class="fa-solid fa-bookmark"></i> Saved Jobs</a>
+      <div class="side-divider"></div>
+      <a href="profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+      <a href="index.html"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </nav>
+  </aside>
+  <div class="overlay"></div>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left"><button class="sidebar-toggle"><i class="fa-solid fa-bars"></i></button><h2>My Applications</h2></div>
+      <div class="topbar-right">
+        <div class="chat-wrap">
+          <button class="icon-btn" id="chatBtn"><i class="fa-regular fa-comment-dots"></i><span class="dot"></span></button>
+          <div class="chat-dropdown" id="chatDropdown">
+            <div class="notif-head">Messages <span class="chat-count">0 new</span></div>
+            <div class="chat-list-preview"></div>
+            <a href="messages.html" class="notif-viewall">Open Messages</a>
+          </div>
+        </div>
+        <div class="notif-wrap">
+          <button class="icon-btn" id="notifBtn"><i class="fa-regular fa-bell"></i><span class="dot"></span></button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-head">Notifications <span class="notif-count">0 new</span></div>
+            <div class="notif-list"></div>
+            <a href="notifications.html" class="notif-viewall">View all notifications</a>
+          </div>
+        </div>
+        <a href="profile.html" class="topbar-user">
+          <div class="avatar" style="width:36px;height:36px;font-size:.85rem;" id="topbarAvatar">—</div>
+          <div><div style="font-size:.85rem;font-weight:600;" id="topbarName">Loading…</div><div style="font-size:.72rem;color:var(--gray-500);">Job Seeker</div></div>
+        </a>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Jobs you've applied to</h3>
+          <select id="statusFilter" class="form-control" style="max-width:200px;">
+            <option value="">All Statuses</option>
+            <option>Pending</option><option>Shortlisted</option><option>Accepted</option><option>Rejected</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Job Title</th><th>Company</th><th>Date Applied</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="appsBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="appsPagination"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  let currentSeeker = null;
+  let myApps = [];
+  let currentPage = 1;
+  const perPage = 5;
+  let statusFilter = '';
+
+  function getFiltered(){
+    return myApps.filter(a => !statusFilter || a.status === statusFilter);
+  }
+
+  function renderApps(){
+    const filtered = getFiltered();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+    if(currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage-1)*perPage;
+    const pageItems = filtered.slice(start, start+perPage);
+    const body = document.getElementById('appsBody');
+
+    if(pageItems.length === 0){
+      body.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-inbox"></i><p>You haven't applied to any jobs yet.</p><a href="search-jobs.html" class="btn btn-primary btn-sm mt-16">Browse Jobs</a></div></td></tr>`;
+    } else {
+      body.innerHTML = pageItems.map(a=>`
+        <tr>
+          <td>${a.jobs?.title || 'Job'}</td><td>${a.jobs?.employer_profiles?.company_name || '—'}</td><td>${new Date(a.applied_at).toLocaleDateString()}</td>
+          <td><span class="badge ${a.status.toLowerCase()}">${a.status}</span></td>
+          <td class="table-actions">
+            <a class="icon-action" title="View Job" href="job-details.html?id=${a.job_id}"><i class="fa-solid fa-eye"></i></a>
+          </td>
+        </tr>`).join('');
+    }
+    renderPagination(document.getElementById('appsPagination'), filtered.length, perPage, currentPage, p=>{ currentPage=p; renderApps(); });
+  }
+
+  document.getElementById('statusFilter').addEventListener('change', e=>{
+    statusFilter = e.target.value; currentPage=1; renderApps();
+  });
+
+  (async function init(){
+    currentSeeker = await requireRole('seeker');
+    if(!currentSeeker) return;
+    renderTopbarUser(currentSeeker.name, 'Job Seeker');
+    try{
+      myApps = await Applications.mine(currentSeeker.id);
+    }catch(err){
+      showToast('Could not load your applications.', 'error');
+    }
+    renderApps();
+    renderChatDropdown('seeker');
+  })();
+</script>
+</body>
+</html>

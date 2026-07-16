@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messages | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <button class="sidebar-close"><i class="fa-solid fa-xmark"></i></button>
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <nav class="side-nav" id="sideNav"></nav>
+  </aside>
+  <div class="overlay"></div>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left"><button class="sidebar-toggle"><i class="fa-solid fa-bars"></i></button><h2>Messages</h2></div>
+    </header>
+
+    <div class="page-body">
+      <div class="chat-shell">
+        <div class="chat-list">
+          <div class="chat-list-head">Conversations</div>
+          <div id="chatListItems"></div>
+        </div>
+        <div class="chat-window">
+          <div class="chat-window-head" id="chatWindowHead"></div>
+          <div class="chat-messages" id="chatMessages"></div>
+          <form class="chat-input-row" id="chatInputForm">
+            <input type="text" class="form-control" id="chatInput" placeholder="Type a message..." autocomplete="off">
+            <button type="submit" id="chatSendBtn"><i class="fa-solid fa-paper-plane"></i></button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  let me = null;
+  let conversations = []; /* each: {id, other:{id,name,role}, lastMessage, unreadCount} */
+  let activeId = null;
+  let activeMessages = [];
+  let liveChannel = null;
+
+  function nowTime(ts){
+    return new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  }
+  function initialsOf(name){
+    return (name || '?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  }
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function otherOf(convo){
+    return convo.a.id === me.id ? convo.b : convo.a;
+  }
+
+  async function loadConversationSummaries(){
+    const rows = await Messaging.listConversations(me.id);
+    conversations = await Promise.all(rows.map(async (c) => {
+      const other = c.a.id === me.id ? c.b : c.a;
+      const msgs = await Messaging.listMessages(c.id);
+      const last = msgs[msgs.length - 1];
+      const unread = msgs.filter(m => m.sender_id !== me.id && !m.read).length;
+      return { id: c.id, other, last, unread };
+    }));
+    conversations.sort((x,y) => new Date(y.last?.created_at || 0) - new Date(x.last?.created_at || 0));
+  }
+
+  function paintList(){
+    const listEl = document.getElementById('chatListItems');
+    if(conversations.length === 0){
+      listEl.innerHTML = `<div class="empty-state"><i class="fa-solid fa-comments"></i><p>No conversations yet.</p></div>`;
+      return;
+    }
+    listEl.innerHTML = conversations.map(c=>`
+      <div class="chat-list-item ${c.id===activeId?'active':''} ${c.unread?'unread':''}" data-id="${c.id}">
+        <div class="avatar" style="width:40px;height:40px;font-size:.85rem;flex-shrink:0;">${initialsOf(c.other.name)}</div>
+        <div style="min-width:0;">
+          <p class="name">${c.other.name}</p>
+          <p class="last-msg">${c.last ? escapeHtml(c.last.text) : 'No messages yet'}</p>
+        </div>
+        <div class="meta">
+          <small>${c.last ? nowTime(c.last.created_at) : ''}</small>
+          ${c.unread ? `<div class="dot" style="position:static;width:8px;height:8px;background:var(--error);border-radius:50%;margin-left:auto;margin-top:6px;"></div>` : ''}
+        </div>
+      </div>`).join('');
+    document.querySelectorAll('.chat-list-item').forEach(item=>{
+      item.addEventListener('click', ()=> openConversation(Number(item.dataset.id)));
+    });
+  }
+
+  function paintWindow(other){
+    document.getElementById('chatWindowHead').innerHTML = other ? `
+      <div class="avatar" style="width:40px;height:40px;font-size:.85rem;">${initialsOf(other.name)}</div>
+      <div><strong style="font-size:.92rem;">${other.name}</strong><div style="font-size:.75rem;color:var(--gray-500);">${other.role==='employer'?'Employer':'Job Seeker'}</div></div>` : '';
+    renderMessages();
+  }
+
+  function renderMessages(){
+    const msgsEl = document.getElementById('chatMessages');
+    if(!activeId){
+      msgsEl.innerHTML = `<div class="empty-state"><i class="fa-solid fa-comments"></i><p>Select a conversation to start chatting.</p></div>`;
+      return;
+    }
+    msgsEl.innerHTML = activeMessages.map(m=>`
+      <div class="chat-bubble ${m.sender_id===me.id?'out':'in'}">${escapeHtml(m.text)}<time>${nowTime(m.created_at)}</time></div>`).join('');
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+
+  async function openConversation(id){
+    activeId = id;
+    const convo = conversations.find(c=>c.id===id);
+    paintList();
+    paintWindow(convo?.other);
+
+    try{
+      activeMessages = await Messaging.listMessages(id);
+      renderMessages();
+      await Messaging.markConversationRead(id, me.id);
+      if(convo) convo.unread = 0;
+      paintList();
+    }catch(err){ showToast('Could not load messages.', 'error'); }
+
+    if(liveChannel) Messaging.unsubscribe(liveChannel);
+    liveChannel = Messaging.subscribeToMessages(id, (payload)=>{
+      activeMessages.push(payload.new);
+      renderMessages();
+      if(payload.new.sender_id !== me.id) Messaging.markConversationRead(id, me.id);
+    });
+  }
+
+  const inputEl = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('chatSendBtn');
+  inputEl.addEventListener('input', ()=>{ sendBtn.disabled = !inputEl.value.trim(); });
+
+  document.getElementById('chatInputForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    const text = inputEl.value.trim();
+    if(!text || !activeId) return;
+    inputEl.value = '';
+    sendBtn.disabled = true;
+    try{
+      await Messaging.send(activeId, me.id, text);
+      /* the realtime subscription above will append it once Supabase echoes it back */
+    }catch(err){ showToast(err.message || 'Could not send message.', 'error'); }
+  });
+
+  (async function init(){
+    me = await Auth.currentProfile();
+    if(!me){ window.location.href = 'login.html'; return; }
+
+    const sideNav = document.getElementById('sideNav');
+    sideNav.innerHTML = me.role === 'employer' ? `
+        <a href="employer-dashboard.html"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+        <a href="post-job.html"><i class="fa-solid fa-circle-plus"></i> Post Job</a>
+        <a href="manage-jobs.html"><i class="fa-solid fa-briefcase"></i> Manage Jobs</a>
+        <a href="employer-applications.html"><i class="fa-solid fa-file-lines"></i> View Applications</a>
+        <a href="messages.html" class="active"><i class="fa-solid fa-comments"></i> Messages</a>
+        <a href="reports.html"><i class="fa-solid fa-chart-pie"></i> Reports</a>
+        <div class="side-divider"></div>
+        <a href="employer-profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+        <a href="index.html"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>` : `
+        <a href="seeker-dashboard.html"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+        <a href="search-jobs.html"><i class="fa-solid fa-magnifying-glass"></i> Search Jobs</a>
+        <a href="my-applications.html"><i class="fa-solid fa-file-lines"></i> Applications</a>
+        <a href="messages.html" class="active"><i class="fa-solid fa-comments"></i> Messages</a>
+        <a href="saved-jobs.html"><i class="fa-solid fa-bookmark"></i> Saved Jobs</a>
+        <div class="side-divider"></div>
+        <a href="profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+        <a href="index.html"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>`;
+    initLogoutLinks();
+
+    sendBtn.disabled = true;
+
+    try{
+      /* messages.html?with=<userId> starts/opens a thread with a specific
+         person — used by the "Message" button on an applicant's profile. */
+      const withId = new URLSearchParams(location.search).get('with');
+      if(withId && withId !== me.id){
+        await Messaging.getOrCreateConversation(me.id, withId);
+      }
+
+      await loadConversationSummaries();
+      paintList();
+
+      const paramId = Number(new URLSearchParams(location.search).get('id'));
+      const target = conversations.find(c=>c.id===paramId) || conversations.find(c=>c.other.id===withId) || conversations[0];
+      if(target) await openConversation(target.id);
+      else paintWindow(null);
+    }catch(err){ showToast('Could not load your conversations.', 'error'); }
+  })();
+</script>
+</body>
+</html>

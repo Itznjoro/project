@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notifications | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <button class="sidebar-close"><i class="fa-solid fa-xmark"></i></button>
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <nav class="side-nav" id="sideNav"></nav>
+  </aside>
+  <div class="overlay"></div>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left"><button class="sidebar-toggle"><i class="fa-solid fa-bars"></i></button><h2>Notifications</h2></div>
+      <div class="topbar-right">
+        <button class="btn btn-ghost btn-sm" id="markAllBtn"><i class="fa-solid fa-check-double"></i> Mark all as read</button>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="panel" style="max-width:720px;">
+        <div class="panel-head"><h3>All Notifications</h3></div>
+        <div id="notifFullList"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  let me = null;
+  let notifs = [];
+
+  function timeAgo(ts){
+    const diffMin = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
+    if(diffMin < 1) return 'just now';
+    if(diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin/60);
+    if(diffHr < 24) return `${diffHr}h ago`;
+    return `${Math.floor(diffHr/24)}d ago`;
+  }
+
+  function paint(){
+    const list = document.getElementById('notifFullList');
+    if(notifs.length === 0){
+      list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-bell"></i><p>No notifications yet.</p></div>`;
+      return;
+    }
+    list.innerHTML = notifs.map(n=>`
+      <div class="notif-item ${n.read?'':'unread'}">
+        <div class="notif-icon"><i class="fa-solid ${n.icon || 'fa-bell'}"></i></div>
+        <div><p>${n.text}</p><small>${timeAgo(n.created_at)}</small></div>
+      </div>`).join('');
+  }
+
+  document.getElementById('markAllBtn').addEventListener('click', async ()=>{
+    try{
+      await Notifications.markAllRead(me.id);
+      notifs.forEach(n=> n.read = true);
+      paint();
+      showToast('All notifications marked as read.', 'success');
+    }catch(err){ showToast(err.message || 'Could not update notifications.', 'error'); }
+  });
+
+  (async function init(){
+    me = await Auth.currentProfile();
+    if(!me){ window.location.href = 'login.html'; return; }
+
+    const sideNav = document.getElementById('sideNav');
+    sideNav.innerHTML = me.role === 'employer' ? `
+        <a href="employer-dashboard.html"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+        <a href="post-job.html"><i class="fa-solid fa-circle-plus"></i> Post Job</a>
+        <a href="manage-jobs.html"><i class="fa-solid fa-briefcase"></i> Manage Jobs</a>
+        <a href="employer-applications.html"><i class="fa-solid fa-file-lines"></i> View Applications</a>
+        <a href="messages.html"><i class="fa-solid fa-comments"></i> Messages</a>
+        <a href="reports.html"><i class="fa-solid fa-chart-pie"></i> Reports</a>
+        <div class="side-divider"></div>
+        <a href="employer-profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+        <a href="index.html"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>` : `
+        <a href="seeker-dashboard.html"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+        <a href="search-jobs.html"><i class="fa-solid fa-magnifying-glass"></i> Search Jobs</a>
+        <a href="my-applications.html"><i class="fa-solid fa-file-lines"></i> Applications</a>
+        <a href="messages.html"><i class="fa-solid fa-comments"></i> Messages</a>
+        <a href="saved-jobs.html"><i class="fa-solid fa-bookmark"></i> Saved Jobs</a>
+        <div class="side-divider"></div>
+        <a href="profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+        <a href="index.html"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>`;
+    initLogoutLinks();
+
+    try{
+      notifs = await Notifications.list(me.id);
+      paint();
+    }catch(err){ showToast('Could not load notifications.', 'error'); }
+  })();
+</script>
+</body>
+</html>

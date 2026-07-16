@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Post a Job | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <button class="sidebar-close"><i class="fa-solid fa-xmark"></i></button>
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <nav class="side-nav">
+      <a href="employer-dashboard.html"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="post-job.html" class="active"><i class="fa-solid fa-circle-plus"></i> Post Job</a>
+      <a href="manage-jobs.html"><i class="fa-solid fa-briefcase"></i> Manage Jobs</a>
+      <a href="employer-applications.html"><i class="fa-solid fa-file-lines"></i> View Applications</a>
+      <a href="messages.html"><i class="fa-solid fa-comments"></i> Messages</a>
+      <a href="reports.html"><i class="fa-solid fa-chart-pie"></i> Reports</a>
+      <div class="side-divider"></div>
+      <a href="employer-profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+      <a href="index.html"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </nav>
+  </aside>
+  <div class="overlay"></div>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left"><button class="sidebar-toggle"><i class="fa-solid fa-bars"></i></button><h2>Post a Job</h2></div>
+      <div class="topbar-right">
+        <div class="chat-wrap">
+          <button class="icon-btn" id="chatBtn"><i class="fa-regular fa-comment-dots"></i><span class="dot"></span></button>
+          <div class="chat-dropdown" id="chatDropdown">
+            <div class="notif-head">Messages <span class="chat-count">0 new</span></div>
+            <div class="chat-list-preview"></div>
+            <a href="messages.html" class="notif-viewall">Open Messages</a>
+          </div>
+        </div>
+        <div class="notif-wrap">
+          <button class="icon-btn" id="notifBtn"><i class="fa-regular fa-bell"></i><span class="dot"></span></button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-head">Notifications <span class="notif-count">0 new</span></div>
+            <div class="notif-list"></div>
+            <a href="notifications.html" class="notif-viewall">View all notifications</a>
+          </div>
+        </div>
+        <a href="employer-profile.html"><div class="avatar" style="width:36px;height:36px;font-size:.85rem;" id="topbarAvatar">—</div></a>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="panel" style="max-width:820px;">
+        <div class="panel-head"><h3>Job Details</h3></div>
+        <form id="postJobForm" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="jobTitle">Job Title</label>
+              <input type="text" id="jobTitle" class="form-control" placeholder="e.g. Frontend Developer" required>
+              <div class="form-error">Job title is required.</div>
+            </div>
+            <div class="form-group">
+              <label for="companyName">Company Name</label>
+              <input type="text" id="companyName" class="form-control" placeholder="e.g. NovaSoft Ltd" required>
+              <div class="form-error">Company name is required.</div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="jobCategory">Job Category</label>
+              <select id="jobCategory" class="form-control" required>
+                <option value="">Select category</option>
+                <option>IT & Software</option><option>Marketing</option><option>Design</option>
+                <option>Finance</option><option>Human Resources</option><option>Customer Service</option>
+              </select>
+              <div class="form-error">Please select a category.</div>
+            </div>
+            <div class="form-group">
+              <label for="jobLocation">Location</label>
+              <input type="text" id="jobLocation" class="form-control" list="kenyaCounties" placeholder="Start typing or pick a county..." autocomplete="off" required>
+              <datalist id="kenyaCounties">
+                <option value="Mombasa">
+                <option value="Kwale">
+                <option value="Kilifi">
+                <option value="Tana River">
+                <option value="Lamu">
+                <option value="Taita-Taveta">
+                <option value="Garissa">
+                <option value="Wajir">
+                <option value="Mandera">
+                <option value="Marsabit">
+                <option value="Isiolo">
+                <option value="Meru">
+                <option value="Tharaka-Nithi">
+                <option value="Embu">
+                <option value="Kitui">
+                <option value="Machakos">
+                <option value="Makueni">
+                <option value="Nyandarua">
+                <option value="Nyeri">
+                <option value="Kirinyaga">
+                <option value="Murang'a">
+                <option value="Kiambu">
+                <option value="Turkana">
+                <option value="West Pokot">
+                <option value="Samburu">
+                <option value="Trans Nzoia">
+                <option value="Uasin Gishu">
+                <option value="Elgeyo-Marakwet">
+                <option value="Nandi">
+                <option value="Baringo">
+                <option value="Laikipia">
+                <option value="Nakuru">
+                <option value="Narok">
+                <option value="Kajiado">
+                <option value="Kericho">
+                <option value="Bomet">
+                <option value="Kakamega">
+                <option value="Vihiga">
+                <option value="Bungoma">
+                <option value="Busia">
+                <option value="Siaya">
+                <option value="Kisumu">
+                <option value="Homa Bay">
+                <option value="Migori">
+                <option value="Kisii">
+                <option value="Nyamira">
+                <option value="Nairobi">
+              </datalist>
+              <div class="form-error">Location is required.</div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="jobSalary">Salary</label>
+              <input type="text" id="jobSalary" class="form-control" placeholder="e.g. KES 80,000 - 120,000" required>
+              <div class="form-error">Salary is required.</div>
+            </div>
+            <div class="form-group">
+              <label for="jobType">Employment Type</label>
+              <select id="jobType" class="form-control" required>
+                <option value="">Select type</option>
+                <option>Full-time</option><option>Part-time</option><option>Contract</option><option>Internship</option>
+              </select>
+              <div class="form-error">Please select employment type.</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="jobDescription">Job Description</label>
+            <textarea id="jobDescription" class="form-control" placeholder="Describe the role and responsibilities..." required></textarea>
+            <div class="form-error">Job description is required.</div>
+          </div>
+
+          <div class="form-group">
+            <label for="jobRequirements">Requirements</label>
+            <textarea id="jobRequirements" class="form-control" placeholder="List required skills and qualifications, one per line..." required></textarea>
+            <div class="form-error">Requirements are required.</div>
+          </div>
+
+          <div class="form-group" style="max-width:260px;">
+            <label for="jobDeadline">Application Deadline</label>
+            <input type="date" id="jobDeadline" class="form-control" required>
+            <div class="form-error">Deadline is required.</div>
+          </div>
+
+          <div style="display:flex;gap:14px;margin-top:8px;">
+            <button type="submit" class="btn btn-primary" id="postJobBtn"><i class="fa-solid fa-paper-plane"></i> Post Job</button>
+            <button type="reset" class="btn btn-ghost" id="resetJobBtn">Reset</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/data.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  let currentEmployer = null;
+
+  (async function init(){
+    currentEmployer = await requireRole('employer');
+    if(!currentEmployer) return;
+    const companyField = document.getElementById('companyName');
+    try{
+      const empProfile = await Profiles.getEmployerProfile(currentEmployer.id);
+      companyField.value = empProfile.company_name;
+      companyField.readOnly = true; /* company identity comes from the account, not a free-text field */
+      companyField.title = 'Edit your company name from your Profile page.';
+      renderTopbarUser(empProfile.company_name, 'Employer', empProfile.logo_url);
+    }catch(err){ renderTopbarUser(currentEmployer.name, 'Employer'); }
+    renderChatDropdown('employer');
+  })();
+
+  function parseSalaryRange(text){
+    const numbers = (text.match(/[\d,]+/g) || []).map(n => parseInt(n.replace(/,/g, ''), 10));
+    return { min: numbers[0] || null, max: numbers[1] || numbers[0] || null };
+  }
+
+  document.getElementById('postJobForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    if(!validateRequired(this)){ showToast('Please fill in all required fields.', 'error'); return; }
+    if(!currentEmployer) return;
+
+    const btn = document.getElementById('postJobBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-inline"></span> Posting...';
+
+    const { min, max } = parseSalaryRange(document.getElementById('jobSalary').value);
+    const requirements = document.getElementById('jobRequirements').value
+      .split('\n').map(s => s.trim()).filter(Boolean);
+
+    try{
+      await Jobs.create({
+        employer_id: currentEmployer.id,
+        title: document.getElementById('jobTitle').value.trim(),
+        category: document.getElementById('jobCategory').value,
+        location: document.getElementById('jobLocation').value.trim(),
+        type: document.getElementById('jobType').value,
+        salary_min: min,
+        salary_max: max,
+        description: document.getElementById('jobDescription').value.trim(),
+        requirements,
+        deadline: document.getElementById('jobDeadline').value || null,
+        status: 'Active'
+      });
+      showToast('Job posted successfully!', 'success');
+      this.reset();
+    }catch(err){
+      showToast(err.message || 'Could not post job.', 'error');
+    }finally{
+      btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Post Job';
+    }
+  });
+  document.getElementById('resetJobBtn').addEventListener('click', ()=>{
+    document.querySelectorAll('#postJobForm .form-group').forEach(clearFieldError);
+  });
+</script>
+</body>
+</html>

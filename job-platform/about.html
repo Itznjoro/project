@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About Us | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="navbar">
+  <div class="container">
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="search-jobs.html">Find Jobs</a>
+      <a href="about.html" class="active">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div class="nav-actions">
+      <a href="login.html" class="btn btn-outline-light btn-sm">Log In</a>
+      <a href="register.html" class="btn btn-accent btn-sm">Register</a>
+    </div>
+    <button class="nav-toggle"><i class="fa-solid fa-bars"></i></button>
+  </div>
+</header>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>About JobMatch</h1>
+    <p>Building a smarter, faster way for talent and opportunity to find each other.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Company Information</span>
+      <h2>Who we are</h2>
+      <p>JobMatch was founded to close the gap between skilled job seekers and the employers looking for them. Since launch, we've helped thousands of candidates land roles and hundreds of companies build stronger teams — all through one streamlined platform.</p>
+    </div>
+
+    <div class="mvo-grid">
+      <div class="mvo-card">
+        <i class="fa-solid fa-bullseye"></i>
+        <h3>Our Mission</h3>
+        <p class="mt-8">To make job searching and hiring simple, transparent, and accessible for everyone, regardless of background or location.</p>
+      </div>
+      <div class="mvo-card">
+        <i class="fa-solid fa-eye"></i>
+        <h3>Our Vision</h3>
+        <p class="mt-8">To become the most trusted job matching platform in the region, known for meaningful connections between people and companies.</p>
+      </div>
+      <div class="mvo-card">
+        <i class="fa-solid fa-list-check"></i>
+        <h3>Our Objectives</h3>
+        <p class="mt-8">Reduce time-to-hire, improve match quality, and give both job seekers and employers full visibility into the hiring process.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--white);">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Our Team</span>
+      <h2>The people behind JobMatch</h2>
+    </div>
+    <div class="team-grid" id="teamGrid"></div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container"><div class="footer-bottom">&copy; 2026 JobMatch. All rights reserved.</div></div>
+</footer>
+
+<script src="js/data.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  const initials = n => n.split(' ').map(w=>w[0]).slice(0,2).join('');
+  document.getElementById('teamGrid').innerHTML = TEAM.map(t=>`
+    <div class="team-card">
+      <div class="team-photo">${initials(t.name)}</div>
+      <h3 style="font-size:1rem;">${t.name}</h3>
+      <div class="role">${t.role}</div>
+    </div>`).join('');
+</script>
+</body>
+</html>

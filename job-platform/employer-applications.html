@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Applications | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <button class="sidebar-close"><i class="fa-solid fa-xmark"></i></button>
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <nav class="side-nav">
+      <a href="employer-dashboard.html"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="post-job.html"><i class="fa-solid fa-circle-plus"></i> Post Job</a>
+      <a href="manage-jobs.html"><i class="fa-solid fa-briefcase"></i> Manage Jobs</a>
+      <a href="employer-applications.html" class="active"><i class="fa-solid fa-file-lines"></i> View Applications</a>
+      <a href="messages.html"><i class="fa-solid fa-comments"></i> Messages</a>
+      <a href="reports.html"><i class="fa-solid fa-chart-pie"></i> Reports</a>
+      <div class="side-divider"></div>
+      <a href="employer-profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+      <a href="index.html"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </nav>
+  </aside>
+  <div class="overlay"></div>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left"><button class="sidebar-toggle"><i class="fa-solid fa-bars"></i></button><h2>Applications</h2></div>
+      <div class="topbar-right">
+        <div class="chat-wrap">
+          <button class="icon-btn" id="chatBtn"><i class="fa-regular fa-comment-dots"></i><span class="dot"></span></button>
+          <div class="chat-dropdown" id="chatDropdown">
+            <div class="notif-head">Messages <span class="chat-count">0 new</span></div>
+            <div class="chat-list-preview"></div>
+            <a href="messages.html" class="notif-viewall">Open Messages</a>
+          </div>
+        </div>
+        <div class="notif-wrap">
+          <button class="icon-btn" id="notifBtn"><i class="fa-regular fa-bell"></i><span class="dot"></span></button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-head">Notifications <span class="notif-count">0 new</span></div>
+            <div class="notif-list"></div>
+            <a href="notifications.html" class="notif-viewall">View all notifications</a>
+          </div>
+        </div>
+        <a href="employer-profile.html"><div class="avatar" style="width:36px;height:36px;font-size:.85rem;" id="topbarAvatar">—</div></a>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>All Applications</h3>
+          <select id="statusFilter" class="form-control" style="max-width:200px;">
+            <option value="">All Statuses</option>
+            <option>Pending</option><option>Shortlisted</option><option>Accepted</option><option>Rejected</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Applicant Name</th><th>Job Applied</th><th>Date Applied</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="appsBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="appsPagination"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Applicant Profile Modal (Employer-only) -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-head"><h3>Applicant Profile</h3><button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body" id="profileModalBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close-modal>Close</button>
+      <a href="messages.html" class="btn btn-primary" id="profileMessageBtn"><i class="fa-solid fa-comment-dots"></i> Message</a>
+    </div>
+  </div>
+</div>
+
+<!-- CV Modal -->
+<div class="modal-overlay" id="cvModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="cvApplicant">Applicant CV</h3><button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div style="border:1px dashed var(--gray-300);border-radius:var(--radius-sm);padding:40px;text-align:center;color:var(--gray-500);">
+        <i class="fa-solid fa-file-pdf" style="font-size:2.2rem;color:var(--error);margin-bottom:12px;"></i>
+        <p>CV_Resume.pdf preview would appear here.</p>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" data-close-modal>Close</button></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  let currentEmployer = null;
+  let appsData = [];
+  let currentPage = 1;
+  const perPage = 5;
+  let statusFilter = '';
+
+  function getFiltered(){
+    return appsData.filter(a => !statusFilter || a.status === statusFilter);
+  }
+
+  function renderApps(){
+    const filtered = getFiltered();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+    if(currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage-1)*perPage;
+    const pageItems = filtered.slice(start, start+perPage);
+    const body = document.getElementById('appsBody');
+
+    if(pageItems.length===0){
+      body.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-inbox"></i><p>No applications found.</p></div></td></tr>`;
+    } else {
+      body.innerHTML = pageItems.map(a=>{
+        const applicant = a.profiles?.name || 'Applicant';
+        const jobTitle = a.jobs?.title || 'Job';
+        const date = new Date(a.applied_at).toLocaleDateString();
+        return `
+        <tr>
+          <td>${applicant}</td><td>${jobTitle}</td><td>${date}</td>
+          <td><span class="badge ${a.status.toLowerCase()}">${a.status}</span></td>
+          <td class="table-actions">
+            <button class="icon-action" title="View Profile" onclick="viewProfile(${a.id})"><i class="fa-solid fa-id-card"></i></button>
+            <button class="icon-action" title="View CV" onclick="viewCV(${a.id})"><i class="fa-solid fa-file-lines"></i></button>
+            <button class="icon-action success" title="Accept" onclick="updateStatus(${a.id},'Accepted')"><i class="fa-solid fa-check"></i></button>
+            <button class="icon-action danger" title="Reject" onclick="updateStatus(${a.id},'Rejected')"><i class="fa-solid fa-xmark"></i></button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+    renderPagination(document.getElementById('appsPagination'), filtered.length, perPage, currentPage, p=>{ currentPage=p; renderApps(); });
+  }
+
+  async function loadApps(){
+    try{
+      appsData = await Applications.forEmployer(currentEmployer.id);
+    }catch(err){
+      showToast('Could not load applications.', 'error');
+      appsData = [];
+    }
+    renderApps();
+  }
+
+  function viewProfile(id){
+    const a = appsData.find(x=>x.id===id);
+    if(!a) return;
+    const applicant = a.profiles?.name || 'Applicant';
+    const initials = applicant.split(' ').map(w=>w[0]).slice(0,2).join('');
+    const skills = a.seeker_profiles?.skills || [];
+    document.getElementById('profileModalBody').innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
+        <div class="avatar" style="width:56px;height:56px;font-size:1.1rem;">${initials}</div>
+        <div>
+          <h3 style="font-size:1.05rem;">${applicant}</h3>
+          <span class="badge ${a.status.toLowerCase()}">${a.status}</span>
+        </div>
+      </div>
+      <div class="info-row"><span>Applied For</span><strong>${a.jobs?.title || '—'}</strong></div>
+      <div class="info-row"><span>Email</span><strong>${a.profiles?.email || '—'}</strong></div>
+      <div class="info-row"><span>Phone</span><strong>${a.profiles?.phone || '—'}</strong></div>
+      <div class="info-row"><span>Location</span><strong>${a.seeker_profiles?.location || '—'}</strong></div>
+      <div class="info-row"><span>Date Applied</span><strong>${new Date(a.applied_at).toLocaleDateString()}</strong></div>
+      <div style="margin-top:14px;">
+        <span style="font-size:.82rem;color:var(--gray-500);">About</span>
+        <p style="font-size:.88rem;margin-top:6px;">${a.seeker_profiles?.bio || 'No bio provided.'}</p>
+      </div>
+      ${skills.length ? `<div style="margin-top:14px;">
+        <span style="font-size:.82rem;color:var(--gray-500);">Skills</span>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+          ${skills.map(s=>`<span class="badge shortlisted">${s}</span>`).join('')}
+        </div>
+      </div>` : ''}`;
+    document.getElementById('profileMessageBtn').href = `messages.html?with=${a.seeker_id}`;
+    openModal('profileModal');
+  }
+  window.viewProfile = viewProfile;
+
+  async function viewCV(id){
+    const a = appsData.find(x=>x.id===id);
+    const applicant = a?.profiles?.name || 'Applicant';
+    document.getElementById('cvApplicant').textContent = `${applicant}'s CV`;
+    const path = a?.resume_url || a?.seeker_profiles?.resume_url;
+    const body = document.querySelector('#cvModal .modal-body > div');
+    if(!path){
+      body.innerHTML = `<p style="text-align:center;color:var(--gray-500);">No CV was uploaded for this application.</p>`;
+    } else {
+      try{
+        const url = await Storage.getResumeSignedUrl(path);
+        body.innerHTML = `<a href="${url}" target="_blank" class="btn btn-primary"><i class="fa-solid fa-file-arrow-down"></i> Open CV</a>`;
+      }catch(err){
+        body.innerHTML = `<p style="text-align:center;color:var(--gray-500);">Could not load this CV.</p>`;
+      }
+    }
+    openModal('cvModal');
+  }
+  window.viewCV = viewCV;
+
+  async function updateStatus(id, status){
+    try{
+      await Applications.updateStatus(id, status);
+      const a = appsData.find(x=>x.id===id);
+      if(a) a.status = status;
+      renderApps();
+      showToast(`Application ${status.toLowerCase()}.`, status==='Rejected' ? 'error' : 'success');
+    }catch(err){ showToast(err.message || 'Could not update application.', 'error'); }
+  }
+  window.updateStatus = updateStatus;
+
+  document.getElementById('statusFilter').addEventListener('change', e=>{
+    statusFilter = e.target.value; currentPage=1; renderApps();
+  });
+
+  (async function init(){
+    currentEmployer = await requireRole('employer');
+    if(!currentEmployer) return;
+
+    try{
+      const empProfile = await Profiles.getEmployerProfile(currentEmployer.id);
+      renderTopbarUser(empProfile.company_name, 'Employer', empProfile.logo_url);
+    }catch(err){ renderTopbarUser(currentEmployer.name, 'Employer'); }
+
+    /* Pre-apply status filter from query string, e.g. employer-applications.html?status=Accepted */
+    const initialStatus = new URLSearchParams(location.search).get('status');
+    if(initialStatus){
+      statusFilter = initialStatus;
+      document.getElementById('statusFilter').value = initialStatus;
+    }
+
+    await loadApps();
+    renderChatDropdown('employer');
+  })();
+</script>
+</body>
+</html>

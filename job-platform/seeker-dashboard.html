@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Seeker Dashboard | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <button class="sidebar-close"><i class="fa-solid fa-xmark"></i></button>
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <nav class="side-nav">
+      <a href="seeker-dashboard.html" class="active"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="search-jobs.html"><i class="fa-solid fa-magnifying-glass"></i> Search Jobs</a>
+      <a href="my-applications.html"><i class="fa-solid fa-file-lines"></i> Applications</a>
+      <a href="messages.html"><i class="fa-solid fa-comments"></i> Messages</a>
+      <a href="saved-jobs.html"><i class="fa-solid fa-bookmark"></i> Saved Jobs</a>
+      <div class="side-divider"></div>
+      <a href="profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+      <a href="index.html"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </nav>
+  </aside>
+  <div class="overlay"></div>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left"><button class="sidebar-toggle"><i class="fa-solid fa-bars"></i></button><h2>Job Seeker Dashboard</h2></div>
+      <div class="topbar-right">
+        <div class="chat-wrap">
+          <button class="icon-btn" id="chatBtn"><i class="fa-regular fa-comment-dots"></i><span class="dot"></span></button>
+          <div class="chat-dropdown" id="chatDropdown">
+            <div class="notif-head">Messages <span class="chat-count">0 new</span></div>
+            <div class="chat-list-preview"></div>
+            <a href="messages.html" class="notif-viewall">Open Messages</a>
+          </div>
+        </div>
+        <div class="notif-wrap">
+          <button class="icon-btn" id="notifBtn"><i class="fa-regular fa-bell"></i><span class="dot"></span></button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-head">Notifications <span class="notif-count">0 new</span></div>
+            <div class="notif-list"></div>
+            <a href="notifications.html" class="notif-viewall">View all notifications</a>
+          </div>
+        </div>
+        <a href="profile.html" class="topbar-user">
+          <div class="avatar" style="width:36px;height:36px;font-size:.85rem;" id="topbarAvatar">—</div>
+          <div><div style="font-size:.85rem;font-weight:600;" id="topbarName">Loading…</div><div style="font-size:.72rem;color:var(--gray-500);">Job Seeker</div></div>
+        </a>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <p style="margin-bottom:24px;">Welcome back, <strong id="welcomeName">there</strong> — here's your job search summary.</p>
+
+      <div class="stat-cards">
+        <a href="search-jobs.html" class="stat-card"><div class="icon-box blue"><i class="fa-solid fa-briefcase"></i></div><div><div class="num" id="availableJobsCount">—</div><div class="label">Available Jobs</div></div></a>
+        <a href="my-applications.html" class="stat-card"><div class="icon-box accent"><i class="fa-solid fa-file-lines"></i></div><div><div class="num" id="appliedJobsCount">—</div><div class="label">Applied Jobs</div></div></a>
+        <a href="saved-jobs.html" class="stat-card"><div class="icon-box green"><i class="fa-solid fa-bookmark"></i></div><div><div class="num" id="savedJobsCount">0</div><div class="label">Saved Jobs</div></div></a>
+        <a href="notifications.html" class="stat-card"><div class="icon-box orange"><i class="fa-solid fa-bell"></i></div><div><div class="num" id="notifCount">0</div><div class="label">Notifications</div></div></a>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>Recommended Jobs</h3><a href="search-jobs.html" class="btn btn-ghost btn-sm">Browse All</a></div>
+        <div class="job-grid" id="recJobs"></div>
+      </div>
+
+      <div class="panel" id="myApplicationsPanel">
+        <div class="panel-head"><h3>My Applications</h3><a href="my-applications.html" class="btn btn-ghost btn-sm">View All</a></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Job Title</th><th>Date Applied</th><th>Status</th></tr></thead>
+            <tbody id="dashAppsBody">
+              <tr><td colspan="3"><div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i><p>Loading...</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  function fmtSalary(j){
+    if(j.salary_min && j.salary_max) return `KES ${j.salary_min.toLocaleString()} - ${j.salary_max.toLocaleString()}`;
+    if(j.salary_min) return `From KES ${j.salary_min.toLocaleString()}`;
+    return 'Not disclosed';
+  }
+
+  (async function init(){
+    const seeker = await requireRole('seeker');
+    if(!seeker) return;
+    document.getElementById('welcomeName').textContent = (seeker.name || 'there').split(' ')[0];
+
+    try{
+      const seekerProfile = await Profiles.getSeekerProfile(seeker.id);
+      renderTopbarUser(seeker.name, 'Job Seeker', seekerProfile.avatar_url);
+    }catch(err){ renderTopbarUser(seeker.name, 'Job Seeker'); }
+
+    let jobs = [];
+    try{
+      jobs = await Jobs.search({});
+      document.getElementById('availableJobsCount').textContent = jobs.length;
+      document.getElementById('recJobs').innerHTML = jobs.slice(0,4).map(j=>{
+        const company = j.employer_profiles?.company_name || 'Company';
+        const logo = j.employer_profiles?.logo_url
+          ? `<img src="${j.employer_profiles.logo_url}" alt="${company}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`
+          : company.slice(0,2).toUpperCase();
+        return `
+        <div class="job-card">
+          <div class="job-card-top">
+            <div class="company-logo">${logo}</div>
+            <div><h3>${j.title}</h3><div class="company">${company}</div></div>
+          </div>
+          <div class="job-meta">
+            <span><i class="fa-solid fa-location-dot"></i>${j.location}</span>
+            <span><i class="fa-solid fa-briefcase"></i>${j.type}</span>
+          </div>
+          <div class="job-card-foot">
+            <span class="salary">${fmtSalary(j)}</span>
+            <a href="job-details.html?id=${j.id}" class="btn btn-primary btn-sm">Apply</a>
+          </div>
+        </div>`;
+      }).join('');
+    }catch(err){ showToast('Could not load recommended jobs.', 'error'); }
+
+    try{
+      const apps = await Applications.mine(seeker.id);
+      document.getElementById('appliedJobsCount').textContent = apps.length;
+      const body = document.getElementById('dashAppsBody');
+      body.innerHTML = apps.length ? apps.slice(0,5).map(a=>`
+        <tr><td>${a.jobs?.title || 'Job'}</td><td>${new Date(a.applied_at).toLocaleDateString()}</td><td><span class="badge ${a.status.toLowerCase()}">${a.status}</span></td></tr>
+      `).join('') : `<tr><td colspan="3"><div class="empty-state"><i class="fa-solid fa-inbox"></i><p>No applications yet.</p></div></td></tr>`;
+    }catch(err){ /* non-fatal */ }
+
+    try{
+      const saved = await SavedJobs.list(seeker.id);
+      document.getElementById('savedJobsCount').textContent = saved.length;
+    }catch(err){ /* non-fatal */ }
+
+    try{
+      const unread = await Notifications.unreadCount(seeker.id);
+      document.getElementById('notifCount').textContent = unread;
+    }catch(err){ /* non-fatal */ }
+
+    renderChatDropdown('seeker');
+  })();
+</script>
+</body>
+</html>

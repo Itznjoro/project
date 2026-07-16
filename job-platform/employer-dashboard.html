@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Employer Dashboard | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <aside class="sidebar">
+    <button class="sidebar-close"><i class="fa-solid fa-xmark"></i></button>
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <nav class="side-nav">
+      <a href="employer-dashboard.html" class="active"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="post-job.html"><i class="fa-solid fa-circle-plus"></i> Post Job</a>
+      <a href="manage-jobs.html"><i class="fa-solid fa-briefcase"></i> Manage Jobs</a>
+      <a href="employer-applications.html"><i class="fa-solid fa-file-lines"></i> View Applications</a>
+      <a href="messages.html"><i class="fa-solid fa-comments"></i> Messages</a>
+      <a href="reports.html"><i class="fa-solid fa-chart-pie"></i> Reports</a>
+      <div class="side-divider"></div>
+      <a href="employer-profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+      <a href="index.html"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </nav>
+  </aside>
+
+  <div class="overlay"></div>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="sidebar-toggle"><i class="fa-solid fa-bars"></i></button>
+        <h2>Employer Dashboard</h2>
+      </div>
+      <div class="topbar-right">
+        <div class="chat-wrap">
+          <button class="icon-btn" id="chatBtn"><i class="fa-regular fa-comment-dots"></i><span class="dot"></span></button>
+          <div class="chat-dropdown" id="chatDropdown">
+            <div class="notif-head">Messages <span class="chat-count">0 new</span></div>
+            <div class="chat-list-preview"></div>
+            <a href="messages.html" class="notif-viewall">Open Messages</a>
+          </div>
+        </div>
+        <div class="notif-wrap">
+          <button class="icon-btn" id="notifBtn"><i class="fa-regular fa-bell"></i><span class="dot"></span></button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-head">Notifications <span class="notif-count">0 new</span></div>
+            <div class="notif-list"></div>
+            <a href="notifications.html" class="notif-viewall">View all notifications</a>
+          </div>
+        </div>
+        <a href="employer-profile.html" class="topbar-user">
+          <div class="avatar" style="width:36px;height:36px;font-size:.85rem;" id="topbarAvatar">—</div>
+          <div>
+            <div style="font-size:.85rem;font-weight:600;" id="topbarName">Loading…</div>
+            <div style="font-size:.72rem;color:var(--gray-500);">Employer</div>
+          </div>
+        </a>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <p style="margin-bottom:24px;">Welcome back, <strong id="welcomeName">there</strong> — here's what's happening with your job postings.</p>
+
+      <div class="stat-cards">
+        <a href="manage-jobs.html" class="stat-card"><div class="icon-box blue"><i class="fa-solid fa-briefcase"></i></div><div><div class="num" id="statTotalJobs">—</div><div class="label">Total Jobs Posted</div></div></a>
+        <a href="employer-applications.html" class="stat-card"><div class="icon-box accent"><i class="fa-solid fa-file-lines"></i></div><div><div class="num" id="statTotalApps">—</div><div class="label">Total Applications</div></div></a>
+        <a href="manage-jobs.html?status=Active" class="stat-card"><div class="icon-box green"><i class="fa-solid fa-circle-check"></i></div><div><div class="num" id="statActiveJobs">—</div><div class="label">Active Jobs</div></div></a>
+        <a href="manage-jobs.html?status=Closed" class="stat-card"><div class="icon-box orange"><i class="fa-solid fa-circle-xmark"></i></div><div><div class="num" id="statClosedJobs">—</div><div class="label">Closed Jobs</div></div></a>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Recent Applications</h3>
+          <a href="employer-applications.html" class="btn btn-ghost btn-sm">View All</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Applicant</th><th>Job Applied</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody id="recentAppsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Your Job Postings</h3>
+          <a href="manage-jobs.html" class="btn btn-ghost btn-sm">Manage Jobs</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Job Title</th><th>Location</th><th>Salary</th><th>Status</th></tr></thead>
+            <tbody id="myJobsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  function fmtSalary(j){
+    if(j.salary_min && j.salary_max) return `KES ${j.salary_min.toLocaleString()} - ${j.salary_max.toLocaleString()}`;
+    if(j.salary_min) return `From KES ${j.salary_min.toLocaleString()}`;
+    return 'Not disclosed';
+  }
+
+  (async function init(){
+    const employer = await requireRole('employer');
+    if(!employer) return;
+    document.getElementById('welcomeName').textContent = employer.name || 'there';
+
+    try{
+      const empProfile = await Profiles.getEmployerProfile(employer.id);
+      renderTopbarUser(empProfile.company_name, 'Employer', empProfile.logo_url);
+    }catch(err){ renderTopbarUser(employer.name, 'Employer'); }
+
+    let jobs = [];
+    try{
+      jobs = await Jobs.myJobs(employer.id);
+      document.getElementById('myJobsBody').innerHTML = jobs.length ? jobs.slice(0,5).map(j=>`
+        <tr><td>${j.title}</td><td>${j.location}</td><td>${fmtSalary(j)}</td><td><span class="badge ${j.status.toLowerCase()}">${j.status}</span></td></tr>
+      `).join('') : `<tr><td colspan="4"><div class="empty-state"><i class="fa-solid fa-inbox"></i><p>You haven't posted any jobs yet.</p><a href="post-job.html" class="btn btn-primary btn-sm mt-16">Post a Job</a></div></td></tr>`;
+
+      document.getElementById('statTotalJobs').textContent = jobs.length;
+      document.getElementById('statActiveJobs').textContent = jobs.filter(j=>j.status==='Active').length;
+      document.getElementById('statClosedJobs').textContent = jobs.filter(j=>j.status==='Closed').length;
+    }catch(err){ showToast('Could not load your jobs.', 'error'); }
+
+    try{
+      const apps = await Applications.forEmployer(employer.id);
+      document.getElementById('recentAppsBody').innerHTML = apps.length ? apps.slice(0,5).map(a=>`
+        <tr><td>${a.profiles?.name || 'Applicant'}</td><td>${a.jobs?.title || 'Job'}</td><td>${new Date(a.applied_at).toLocaleDateString()}</td><td><span class="badge ${a.status.toLowerCase()}">${a.status}</span></td></tr>
+      `).join('') : `<tr><td colspan="4"><div class="empty-state"><i class="fa-solid fa-inbox"></i><p>No applications yet.</p></div></td></tr>`;
+      document.getElementById('statTotalApps').textContent = apps.length;
+    }catch(err){ showToast('Could not load applications.', 'error'); }
+
+    renderChatDropdown('employer');
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saved Jobs | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <button class="sidebar-close"><i class="fa-solid fa-xmark"></i></button>
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <nav class="side-nav">
+      <a href="seeker-dashboard.html"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="search-jobs.html"><i class="fa-solid fa-magnifying-glass"></i> Search Jobs</a>
+      <a href="my-applications.html"><i class="fa-solid fa-file-lines"></i> Applications</a>
+      <a href="messages.html"><i class="fa-solid fa-comments"></i> Messages</a>
+      <a href="saved-jobs.html" class="active"><i class="fa-solid fa-bookmark"></i> Saved Jobs</a>
+      <div class="side-divider"></div>
+      <a href="profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+      <a href="index.html"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </nav>
+  </aside>
+  <div class="overlay"></div>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left"><button class="sidebar-toggle"><i class="fa-solid fa-bars"></i></button><h2>Saved Jobs</h2></div>
+      <div class="topbar-right">
+        <div class="chat-wrap">
+          <button class="icon-btn" id="chatBtn"><i class="fa-regular fa-comment-dots"></i><span class="dot"></span></button>
+          <div class="chat-dropdown" id="chatDropdown">
+            <div class="notif-head">Messages <span class="chat-count">0 new</span></div>
+            <div class="chat-list-preview"></div>
+            <a href="messages.html" class="notif-viewall">Open Messages</a>
+          </div>
+        </div>
+        <div class="notif-wrap">
+          <button class="icon-btn" id="notifBtn"><i class="fa-regular fa-bell"></i><span class="dot"></span></button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-head">Notifications <span class="notif-count">0 new</span></div>
+            <div class="notif-list"></div>
+            <a href="notifications.html" class="notif-viewall">View all notifications</a>
+          </div>
+        </div>
+        <a href="profile.html"><div class="avatar" style="width:36px;height:36px;font-size:.85rem;" id="topbarAvatar">—</div></a>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Jobs you've saved <span style="color:var(--gray-500);font-weight:400;font-size:.85rem;">(newest first)</span></h3>
+          <a href="search-jobs.html" class="btn btn-ghost btn-sm"><i class="fa-solid fa-magnifying-glass"></i> Find More Jobs</a>
+        </div>
+        <div class="job-grid" id="savedGrid"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  let currentSeeker = null;
+
+  function fmtSalary(j){
+    if(j.salary_min && j.salary_max) return `KES ${j.salary_min.toLocaleString()} - ${j.salary_max.toLocaleString()}`;
+    if(j.salary_min) return `From KES ${j.salary_min.toLocaleString()}`;
+    return 'Not disclosed';
+  }
+
+  async function renderSaved(){
+    const grid = document.getElementById('savedGrid');
+    let saved = [];
+    try{
+      saved = await SavedJobs.list(currentSeeker.id); /* already newest-first */
+    }catch(err){
+      showToast('Could not load saved jobs.', 'error');
+    }
+
+    if(saved.length === 0){
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><i class="fa-solid fa-bookmark"></i><p>You haven't saved any jobs yet.</p><a href="search-jobs.html" class="btn btn-primary btn-sm mt-16">Browse Jobs</a></div>`;
+      return;
+    }
+
+    grid.innerHTML = saved.map(s=>{
+      const j = s.jobs;
+      const company = j.employer_profiles?.company_name || 'Company';
+      const logo = j.employer_profiles?.logo_url
+        ? `<img src="${j.employer_profiles.logo_url}" alt="${company}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`
+        : company.slice(0,2).toUpperCase();
+      return `
+      <div class="job-card">
+        <div class="job-card-top">
+          <div class="company-logo">${logo}</div>
+          <div style="flex:1;"><h3>${j.title}</h3><div class="company">${company}</div></div>
+          <button class="save-btn saved" data-id="${j.id}" title="Remove from saved"><i class="fa-solid fa-bookmark"></i></button>
+        </div>
+        <div class="job-meta">
+          <span><i class="fa-solid fa-location-dot"></i>${j.location}</span>
+          <span><i class="fa-solid fa-briefcase"></i>${j.type}</span>
+          <span><i class="fa-regular fa-clock"></i>Saved ${timeAgo(new Date(s.saved_at).getTime())}</span>
+        </div>
+        <div class="job-card-foot">
+          <span class="salary">${fmtSalary(j)}</span>
+          <a href="job-details.html?id=${j.id}" class="btn btn-primary btn-sm">View & Apply</a>
+        </div>
+      </div>`;
+    }).join('');
+
+    grid.querySelectorAll('.save-btn').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        try{
+          await SavedJobs.unsave(Number(btn.dataset.id), currentSeeker.id);
+          showToast('Removed from saved jobs.', 'warning');
+          renderSaved();
+        }catch(err){ showToast(err.message || 'Could not remove job.', 'error'); }
+      });
+    });
+  }
+
+  function timeAgo(ts){
+    const diffMin = Math.floor((Date.now() - ts) / 60000);
+    if(diffMin < 1) return 'just now';
+    if(diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin/60);
+    if(diffHr < 24) return `${diffHr}h ago`;
+    const diffDay = Math.floor(diffHr/24);
+    return `${diffDay}d ago`;
+  }
+
+  (async function init(){
+    currentSeeker = await requireRole('seeker');
+    if(!currentSeeker) return;
+    renderTopbarUser(currentSeeker.name, 'Job Seeker');
+    await renderSaved();
+    renderChatDropdown('seeker');
+  })();
+</script>
+</body>
+</html>

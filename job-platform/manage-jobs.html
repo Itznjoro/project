@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage Jobs | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <button class="sidebar-close"><i class="fa-solid fa-xmark"></i></button>
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <nav class="side-nav">
+      <a href="employer-dashboard.html"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="post-job.html"><i class="fa-solid fa-circle-plus"></i> Post Job</a>
+      <a href="manage-jobs.html" class="active"><i class="fa-solid fa-briefcase"></i> Manage Jobs</a>
+      <a href="employer-applications.html"><i class="fa-solid fa-file-lines"></i> View Applications</a>
+      <a href="messages.html"><i class="fa-solid fa-comments"></i> Messages</a>
+      <a href="reports.html"><i class="fa-solid fa-chart-pie"></i> Reports</a>
+      <div class="side-divider"></div>
+      <a href="employer-profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+      <a href="index.html"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </nav>
+  </aside>
+  <div class="overlay"></div>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left"><button class="sidebar-toggle"><i class="fa-solid fa-bars"></i></button><h2>Manage Jobs</h2></div>
+      <div class="topbar-right">
+        <div class="chat-wrap">
+          <button class="icon-btn" id="chatBtn"><i class="fa-regular fa-comment-dots"></i><span class="dot"></span></button>
+          <div class="chat-dropdown" id="chatDropdown">
+            <div class="notif-head">Messages <span class="chat-count">0 new</span></div>
+            <div class="chat-list-preview"></div>
+            <a href="messages.html" class="notif-viewall">Open Messages</a>
+          </div>
+        </div>
+        <div class="notif-wrap">
+          <button class="icon-btn" id="notifBtn"><i class="fa-regular fa-bell"></i><span class="dot"></span></button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-head">Notifications <span class="notif-count">0 new</span></div>
+            <div class="notif-list"></div>
+            <a href="notifications.html" class="notif-viewall">View all notifications</a>
+          </div>
+        </div>
+        <a href="post-job.html" class="btn btn-accent btn-sm"><i class="fa-solid fa-plus"></i> Post Job</a>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>All Posted Jobs</h3>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <select id="statusFilter" class="form-control" style="max-width:160px;">
+              <option value="">All Statuses</option>
+              <option>Active</option><option>Closed</option>
+            </select>
+            <div class="input-wrap" style="max-width:260px;">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="jobSearch" class="form-control" placeholder="Search jobs...">
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Job Title</th><th>Company</th><th>Location</th><th>Salary</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="jobsBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- View Modal -->
+<div class="modal-overlay" id="viewModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Job Details</h3><button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body" id="viewModalBody"></div>
+    <div class="modal-foot"><button class="btn btn-ghost" data-close-modal>Close</button></div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Edit Job</h3><button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Job Title</label><input type="text" id="editTitle" class="form-control"></div>
+      <div class="form-group"><label>Location</label><input type="text" id="editLocation" class="form-control"></div>
+      <div class="form-group"><label>Salary</label><input type="text" id="editSalary" class="form-control"></div>
+      <div class="form-group"><label>Status</label>
+        <select id="editStatus" class="form-control"><option>Active</option><option>Closed</option></select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn btn-primary" id="saveEditBtn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Delete Job</h3><button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body"><p>Are you sure you want to delete this job posting? This action cannot be undone.</p></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  let currentEmployer = null;
+  let jobsData = [];
+  let currentPage = 1;
+  const perPage = 4;
+  let activeJobId = null;
+  let searchTerm = '';
+  let statusFilter = '';
+
+  function fmtSalary(j){
+    if(j.salary_min && j.salary_max) return `KES ${j.salary_min.toLocaleString()} - ${j.salary_max.toLocaleString()}`;
+    if(j.salary_min) return `From KES ${j.salary_min.toLocaleString()}`;
+    return 'Not disclosed';
+  }
+
+  function getFiltered(){
+    return jobsData.filter(j =>
+      (j.title.toLowerCase().includes(searchTerm.toLowerCase()) || j.location.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (!statusFilter || j.status === statusFilter)
+    );
+  }
+
+  function renderJobs(){
+    const filtered = getFiltered();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+    if(currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage-1)*perPage;
+    const pageItems = filtered.slice(start, start+perPage);
+
+    const body = document.getElementById('jobsBody');
+    if(pageItems.length === 0){
+      body.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fa-solid fa-inbox"></i><p>No jobs found.</p></div></td></tr>`;
+    } else {
+      body.innerHTML = pageItems.map(j => `
+        <tr>
+          <td>${j.title}</td><td>${j.applications?.[0]?.count ?? 0} applicant(s)</td><td>${j.location}</td><td>${fmtSalary(j)}</td>
+          <td><span class="badge ${j.status.toLowerCase()}">${j.status}</span></td>
+          <td class="table-actions">
+            <button class="icon-action" title="View" onclick="viewJob(${j.id})"><i class="fa-solid fa-eye"></i></button>
+            <button class="icon-action" title="Edit" onclick="editJob(${j.id})"><i class="fa-solid fa-pen"></i></button>
+            <button class="icon-action danger" title="Delete" onclick="deleteJob(${j.id})"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>`).join('');
+    }
+    renderPagination(document.getElementById('pagination'), filtered.length, perPage, currentPage, p=>{ currentPage = p; renderJobs(); });
+  }
+
+  async function loadJobs(){
+    try{
+      jobsData = await Jobs.myJobs(currentEmployer.id);
+    }catch(err){
+      showToast('Could not load your jobs.', 'error');
+      jobsData = [];
+    }
+    renderJobs();
+  }
+
+  function viewJob(id){
+    const j = jobsData.find(x=>x.id===id);
+    document.getElementById('viewModalBody').innerHTML = `
+      <div class="info-row" style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);"><span>Job Title</span><strong>${j.title}</strong></div>
+      <div class="info-row" style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);"><span>Location</span><strong>${j.location}</strong></div>
+      <div class="info-row" style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);"><span>Salary</span><strong>${fmtSalary(j)}</strong></div>
+      <div class="info-row" style="display:flex;justify-content:space-between;padding:8px 0;"><span>Status</span><span class="badge ${j.status.toLowerCase()}">${j.status}</span></div>`;
+    openModal('viewModal');
+  }
+  window.viewJob = viewJob;
+
+  function editJob(id){
+    activeJobId = id;
+    const j = jobsData.find(x=>x.id===id);
+    document.getElementById('editTitle').value = j.title;
+    document.getElementById('editLocation').value = j.location;
+    document.getElementById('editSalary').value = fmtSalary(j);
+    document.getElementById('editStatus').value = j.status;
+    openModal('editModal');
+  }
+  window.editJob = editJob;
+
+  document.getElementById('saveEditBtn').addEventListener('click', async ()=>{
+    const numbers = (document.getElementById('editSalary').value.match(/[\d,]+/g) || []).map(n => parseInt(n.replace(/,/g,''),10));
+    try{
+      await Jobs.update(activeJobId, {
+        title: document.getElementById('editTitle').value,
+        location: document.getElementById('editLocation').value,
+        salary_min: numbers[0] || null,
+        salary_max: numbers[1] || numbers[0] || null,
+        status: document.getElementById('editStatus').value
+      });
+      closeModal('editModal');
+      showToast('Job updated successfully.', 'success');
+      loadJobs();
+    }catch(err){ showToast(err.message || 'Could not update job.', 'error'); }
+  });
+
+  function deleteJob(id){
+    activeJobId = id;
+    openModal('deleteModal');
+  }
+  window.deleteJob = deleteJob;
+
+  document.getElementById('confirmDeleteBtn').addEventListener('click', async ()=>{
+    try{
+      await Jobs.remove(activeJobId);
+      closeModal('deleteModal');
+      showToast('Job deleted.', 'success');
+      loadJobs();
+    }catch(err){ showToast(err.message || 'Could not delete job.', 'error'); }
+  });
+
+  document.getElementById('jobSearch').addEventListener('input', e=>{
+    searchTerm = e.target.value; currentPage = 1; renderJobs();
+  });
+  document.getElementById('statusFilter').addEventListener('change', e=>{
+    statusFilter = e.target.value; currentPage = 1; renderJobs();
+  });
+
+  (async function init(){
+    currentEmployer = await requireRole('employer');
+    if(!currentEmployer) return;
+
+    /* Pre-apply status filter from query string, e.g. manage-jobs.html?status=Active */
+    const initialStatus = new URLSearchParams(location.search).get('status');
+    if(initialStatus){
+      statusFilter = initialStatus;
+      document.getElementById('statusFilter').value = initialStatus;
+    }
+
+    await loadJobs();
+    renderChatDropdown('employer');
+  })();
+</script>
+</body>
+</html>

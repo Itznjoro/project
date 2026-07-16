@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Search Jobs | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="navbar">
+  <div class="container">
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="search-jobs.html" class="active">Find Jobs</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div class="nav-actions">
+      <a href="login.html" class="btn btn-outline-light btn-sm">Log In</a>
+      <a href="register.html" class="btn btn-accent btn-sm">Register</a>
+    </div>
+    <button class="nav-toggle"><i class="fa-solid fa-bars"></i></button>
+  </div>
+</header>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Find your next opportunity</h1>
+    <p>Browse thousands of open roles from verified employers.</p>
+  </div>
+</section>
+
+<section class="section" style="padding-top:44px;">
+  <div class="container">
+    <div class="search-bar">
+      <div class="input-wrap"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="searchInput" class="form-control" placeholder="Search by job title or keyword..."></div>
+      <button class="btn btn-primary" id="searchBtn"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+    </div>
+
+    <div class="filters-row">
+      <select id="filterCategory" class="form-control">
+        <option value="">All Categories</option>
+        <option>IT & Software</option><option>Marketing</option><option>Design</option>
+        <option>Finance</option><option>Human Resources</option><option>Customer Service</option>
+      </select>
+      <select id="filterLocation" class="form-control">
+        <option value="">All Locations</option>
+        <option>Nairobi</option><option>Mombasa</option><option>Kisumu</option><option>Nakuru</option><option>Remote</option>
+      </select>
+      <select id="filterType" class="form-control">
+        <option value="">All Job Types</option>
+        <option>Full-time</option><option>Part-time</option><option>Contract</option>
+      </select>
+      <button class="btn btn-ghost" id="clearFilters"><i class="fa-solid fa-arrows-rotate"></i> Clear</button>
+    </div>
+
+    <p id="resultCount" style="margin-bottom:18px;color:var(--gray-500);font-size:.9rem;"></p>
+
+    <div class="job-grid" id="jobGrid"></div>
+    <div class="pagination" id="jobPagination"></div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-bottom">&copy; 2026 JobMatch. All rights reserved.</div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  let currentPage = 1;
+  const perPage = 4;
+  let allJobs = [];
+  let currentSeeker = null;
+  let savedIds = new Set();
+
+  function fmtSalary(j){
+    if(j.salary_min && j.salary_max) return `KES ${j.salary_min.toLocaleString()} - ${j.salary_max.toLocaleString()}`;
+    if(j.salary_min) return `From KES ${j.salary_min.toLocaleString()}`;
+    return 'Salary not disclosed';
+  }
+
+  async function loadJobs(){
+    const q = document.getElementById('searchInput').value.trim();
+    const cat = document.getElementById('filterCategory').value;
+    const loc = document.getElementById('filterLocation').value;
+    const type = document.getElementById('filterType').value;
+    try{
+      allJobs = await Jobs.search({ q, category: cat, location: loc, type });
+    }catch(err){
+      showToast('Could not load jobs.', 'error');
+      allJobs = [];
+    }
+    renderGrid();
+  }
+
+  function renderGrid(){
+    const filtered = allJobs;
+    document.getElementById('resultCount').textContent = `${filtered.length} job${filtered.length!==1?'s':''} found`;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+    if(currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage-1)*perPage;
+    const pageItems = filtered.slice(start, start+perPage);
+    const grid = document.getElementById('jobGrid');
+
+    if(pageItems.length === 0){
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><i class="fa-solid fa-magnifying-glass"></i><p>No jobs match your search. Try different filters.</p></div>`;
+    } else {
+      grid.innerHTML = pageItems.map(j=>{
+        const company = j.employer_profiles?.company_name || 'Company';
+        const logo = j.employer_profiles?.logo_url
+          ? `<img src="${j.employer_profiles.logo_url}" alt="${company}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`
+          : company.slice(0,2).toUpperCase();
+        const saved = savedIds.has(j.id);
+        return `
+        <div class="job-card">
+          <div class="job-card-top">
+            <div class="company-logo">${logo}</div>
+            <div style="flex:1;"><h3>${j.title}</h3><div class="company">${company}</div></div>
+            <button class="save-btn ${saved?'saved':''}" data-id="${j.id}" title="Save job"><i class="fa-${saved?'solid':'regular'} fa-bookmark"></i></button>
+          </div>
+          <div class="job-meta">
+            <span><i class="fa-solid fa-location-dot"></i>${j.location}</span>
+            <span><i class="fa-solid fa-briefcase"></i>${j.type}</span>
+            <span><i class="fa-solid fa-tag"></i>${j.category}</span>
+          </div>
+          <div class="job-card-foot">
+            <span class="salary">${fmtSalary(j)}</span>
+            <a href="job-details.html?id=${j.id}" class="btn btn-primary btn-sm">View & Apply</a>
+          </div>
+        </div>`;
+      }).join('');
+      grid.querySelectorAll('.save-btn').forEach(btn=>{
+        btn.addEventListener('click', async ()=>{
+          if(!currentSeeker){
+            showToast('Log in as a job seeker to save jobs.', 'warning');
+            return;
+          }
+          const id = Number(btn.dataset.id);
+          try{
+            if(savedIds.has(id)){ await SavedJobs.unsave(id, currentSeeker.id); savedIds.delete(id); showToast('Removed from saved jobs.', 'warning'); }
+            else { await SavedJobs.save(id, currentSeeker.id); savedIds.add(id); showToast('Job saved!', 'success'); }
+            renderGrid();
+          }catch(err){ showToast(err.message || 'Could not update saved jobs.', 'error'); }
+        });
+      });
+    }
+    renderPagination(document.getElementById('jobPagination'), filtered.length, perPage, currentPage, p=>{ currentPage = p; renderGrid(); window.scrollTo({top:300,behavior:'smooth'}); });
+  }
+
+  document.getElementById('searchBtn').addEventListener('click', ()=>{ currentPage=1; loadJobs(); });
+  document.getElementById('searchInput').addEventListener('keyup', e=>{ if(e.key==='Enter'){ currentPage=1; loadJobs(); } });
+  ['filterCategory','filterLocation','filterType'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', ()=>{ currentPage=1; loadJobs(); });
+  });
+  document.getElementById('clearFilters').addEventListener('click', ()=>{
+    document.getElementById('searchInput').value='';
+    document.getElementById('filterCategory').value='';
+    document.getElementById('filterLocation').value='';
+    document.getElementById('filterType').value='';
+    currentPage=1; loadJobs();
+  });
+
+  (async function init(){
+    currentSeeker = await Auth.currentProfile();
+    if(currentSeeker && currentSeeker.role === 'seeker'){
+      try{
+        const saved = await SavedJobs.list(currentSeeker.id);
+        savedIds = new Set(saved.map(s=>s.job_id));
+      }catch(err){ /* non-fatal */ }
+    } else {
+      currentSeeker = null;
+    }
+    loadJobs();
+  })();
+</script>
+</body>
+</html>

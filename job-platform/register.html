@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-card fade-up" style="max-width:520px;">
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <div class="auth-head">
+      <h2>Create your account</h2>
+      <p>Join JobMatch as a job seeker or an employer</p>
+    </div>
+
+    <form id="registerForm" novalidate>
+      <div class="form-group">
+        <label>I am registering as</label>
+        <div class="usertype-select">
+          <label class="usertype-option selected" id="optSeeker">
+            <input type="radio" name="userType" value="seeker" checked>
+            <i class="fa-solid fa-user"></i>
+            <div>Job Seeker</div>
+          </label>
+          <label class="usertype-option" id="optEmployer">
+            <input type="radio" name="userType" value="employer">
+            <i class="fa-solid fa-building"></i>
+            <div>Employer</div>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="fullName">Full Name</label>
+        <div class="input-wrap"><i class="fa-solid fa-user"></i><input type="text" id="fullName" class="form-control" placeholder="Jane Doe" required></div>
+        <div class="form-error">Full name is required.</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="regEmail">Email Address</label>
+          <div class="input-wrap"><i class="fa-solid fa-envelope"></i><input type="email" id="regEmail" class="form-control" placeholder="you@example.com" required></div>
+          <div class="form-error">Enter a valid email.</div>
+        </div>
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <div class="input-wrap"><i class="fa-solid fa-phone"></i><input type="tel" id="phone" class="form-control" placeholder="+254 700 000000" required></div>
+          <div class="form-error">Phone number is required.</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="regPassword">Password</label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-lock"></i>
+            <input type="password" id="regPassword" class="form-control" placeholder="Create a password" required>
+            <button type="button" class="toggle-pass"><i class="fa-solid fa-eye"></i></button>
+          </div>
+          <div class="form-error">Minimum 8 characters.</div>
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-lock"></i>
+            <input type="password" id="confirmPassword" class="form-control" placeholder="Repeat password" required>
+            <button type="button" class="toggle-pass"><i class="fa-solid fa-eye"></i></button>
+          </div>
+          <div class="form-error">Passwords do not match.</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="check-row"><input type="checkbox" required> I agree to the <a href="#" style="color:var(--blue-accent);">Terms of Service</a> and <a href="#" style="color:var(--blue-accent);">Privacy Policy</a></label>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" id="registerBtn">Create Account</button>
+    </form>
+
+    <div class="auth-foot">Already have an account? <a href="login.html" style="color:var(--blue-accent);font-weight:600;">Log In</a></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  document.querySelectorAll('.usertype-option').forEach(opt=>{
+    opt.addEventListener('click', ()=>{
+      document.querySelectorAll('.usertype-option').forEach(o=>o.classList.remove('selected'));
+      opt.classList.add('selected');
+      opt.querySelector('input').checked = true;
+    });
+  });
+
+  document.getElementById('registerForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    let ok = true;
+    const name = document.getElementById('fullName');
+    const email = document.getElementById('regEmail');
+    const phone = document.getElementById('phone');
+    const pass = document.getElementById('regPassword');
+    const confirm = document.getElementById('confirmPassword');
+
+    const checks = [
+      [name, name.value.trim().length > 1],
+      [email, /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())],
+      [phone, phone.value.trim().length >= 7],
+      [pass, pass.value.length >= 8],
+      [confirm, confirm.value === pass.value && confirm.value.length > 0]
+    ];
+    checks.forEach(([field, valid])=>{
+      const group = field.closest('.form-group');
+      if(!valid){ setFieldError(group, group.querySelector('.form-error').textContent); ok = false; }
+      else clearFieldError(group);
+    });
+
+    if(!ok){ showToast('Please fix the highlighted fields.', 'error'); return; }
+
+    const btn = document.getElementById('registerBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-inline"></span> Creating account...';
+    const userType = document.querySelector('input[name="userType"]:checked').value;
+
+    try{
+      await Auth.register({
+        name: name.value.trim(),
+        email: email.value.trim(),
+        password: pass.value,
+        phone: phone.value.trim(),
+        role: userType
+      });
+      setCurrentRole(userType); /* remember which portal this session belongs to */
+      showToast('Account created successfully!', 'success');
+      setTimeout(()=>{ window.location.href = userType === 'employer' ? 'employer-dashboard.html' : 'seeker-dashboard.html'; }, 900);
+    }catch(err){
+      showToast(err.message || 'Could not create account. Please try again.', 'error');
+      btn.disabled = false; btn.innerHTML = 'Create Account';
+    }
+  });
+</script>
+</body>
+</html>

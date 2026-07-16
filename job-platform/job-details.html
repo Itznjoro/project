@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Details | JobMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="navbar">
+  <div class="container">
+    <a href="index.html" class="logo"><span class="logo-mark"><i class="fa-solid fa-diagram-project"></i></span>JobMatch</a>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="search-jobs.html" class="active">Find Jobs</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div class="nav-actions">
+      <a href="login.html" class="btn btn-outline-light btn-sm">Log In</a>
+      <a href="register.html" class="btn btn-accent btn-sm">Register</a>
+    </div>
+    <button class="nav-toggle"><i class="fa-solid fa-bars"></i></button>
+  </div>
+</header>
+
+<section class="job-details-hero">
+  <div class="container">
+    <div class="breadcrumb"><a href="search-jobs.html" style="color:rgba(255,255,255,.75);">Find Jobs</a> / <span id="bcTitle">Job Details</span></div>
+    <div class="jd-top">
+      <div class="company-logo" id="jdLogo">--</div>
+      <div>
+        <h1 id="jdTitle" style="font-size:1.8rem;">Loading...</h1>
+        <div id="jdCompany" style="color:rgba(255,255,255,.75);"></div>
+        <div class="jd-meta" id="jdMeta"></div>
+      </div>
+    </div>
+    <div class="jd-actions">
+      <a href="apply-job.html" id="applyBtn" class="btn btn-accent"><i class="fa-solid fa-paper-plane"></i> Apply Now</a>
+      <button class="btn btn-outline-light" id="saveJobBtn"><i class="fa-regular fa-bookmark"></i> Save Job</button>
+    </div>
+  </div>
+</section>
+
+<section class="container jd-body">
+  <div class="jd-main">
+    <h3>Job Description</h3>
+    <p id="jdDescription"></p>
+    <h3>Requirements</h3>
+    <ul id="jdRequirements"></ul>
+  </div>
+  <div class="jd-side">
+    <div class="panel">
+      <h3 style="margin-bottom:14px;">Job Overview</h3>
+      <div class="info-row"><span>Category</span><span id="ovCategory"></span></div>
+      <div class="info-row"><span>Job Type</span><span id="ovType"></span></div>
+      <div class="info-row"><span>Location</span><span id="ovLocation"></span></div>
+      <div class="info-row"><span>Salary</span><span id="ovSalary"></span></div>
+      <div class="info-row"><span>Posted</span><span id="ovPosted"></span></div>
+      <div class="info-row"><span>Deadline</span><span id="ovDeadline"></span></div>
+      <a href="apply-job.html" class="btn btn-primary btn-block mt-16"><i class="fa-solid fa-paper-plane"></i> Apply Now</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container"><div class="footer-bottom">&copy; 2026 JobMatch. All rights reserved.</div></div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/db.js"></script>
+<script src="js/script.js"></script>
+<script>
+  let job = null;
+  let currentSeeker = null;
+
+  function fmtSalary(j){
+    if(j.salary_min && j.salary_max) return `KES ${j.salary_min.toLocaleString()} - ${j.salary_max.toLocaleString()}`;
+    if(j.salary_min) return `From KES ${j.salary_min.toLocaleString()}`;
+    return 'Salary not disclosed';
+  }
+
+  (async function init(){
+    const params = new URLSearchParams(location.search);
+    const id = Number(params.get('id'));
+    if(!id){ document.getElementById('jdTitle').textContent = 'Job not found'; return; }
+
+    try{
+      job = await Jobs.getById(id);
+    }catch(err){
+      document.getElementById('jdTitle').textContent = 'Job not found';
+      document.getElementById('jdDescription').textContent = 'This job may have been removed or the link is incorrect.';
+      return;
+    }
+
+    const company = job.employer_profiles?.company_name || 'Employer';
+    document.title = `${job.title} | JobMatch`;
+    document.getElementById('bcTitle').textContent = job.title;
+    document.getElementById('jdLogo').innerHTML = job.employer_profiles?.logo_url
+      ? `<img src="${job.employer_profiles.logo_url}" alt="${company}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`
+      : company.slice(0,2).toUpperCase();
+    document.getElementById('jdTitle').textContent = job.title;
+    document.getElementById('jdCompany').textContent = company;
+    document.getElementById('jdMeta').innerHTML = `
+      <span><i class="fa-solid fa-location-dot"></i>${job.location}</span>
+      <span><i class="fa-solid fa-briefcase"></i>${job.type}</span>
+      <span><i class="fa-solid fa-sack-dollar"></i>${fmtSalary(job)}</span>`;
+    document.getElementById('jdDescription').textContent = job.description;
+    document.getElementById('jdRequirements').innerHTML = (job.requirements||[]).map(r=>`<li><i class="fa-solid fa-circle-check"></i>${r}</li>`).join('');
+    document.getElementById('ovCategory').textContent = job.category;
+    document.getElementById('ovType').textContent = job.type;
+    document.getElementById('ovLocation').textContent = job.location;
+    document.getElementById('ovSalary').textContent = fmtSalary(job);
+    document.getElementById('ovPosted').textContent = new Date(job.created_at).toLocaleDateString();
+    document.getElementById('ovDeadline').textContent = job.deadline ? new Date(job.deadline).toLocaleDateString() : 'Open';
+    document.querySelectorAll('#applyBtn, .jd-side a.btn-primary').forEach(a=> a.href = `apply-job.html?id=${job.id}`);
+
+    currentSeeker = await Auth.currentProfile();
+    const saveBtn = document.getElementById('saveJobBtn');
+    let saved = false;
+    if(currentSeeker && currentSeeker.role === 'seeker'){
+      try{ saved = await SavedJobs.isSaved(job.id, currentSeeker.id); }catch(err){ /* non-fatal */ }
+    }
+    paintSaveBtn(saved);
+
+    saveBtn.addEventListener('click', async function(){
+      if(!currentSeeker || currentSeeker.role !== 'seeker'){
+        showToast('Log in as a job seeker to save jobs.', 'warning');
+        return;
+      }
+      try{
+        if(saved){ await SavedJobs.unsave(job.id, currentSeeker.id); saved = false; }
+        else { await SavedJobs.save(job.id, currentSeeker.id); saved = true; }
+        paintSaveBtn(saved);
+        showToast(saved ? 'Job saved to your list.' : 'Job removed from saved list.', saved ? 'success' : 'warning');
+      }catch(err){ showToast(err.message || 'Could not update saved jobs.', 'error'); }
+    });
+
+    function paintSaveBtn(isSaved){
+      saveBtn.innerHTML = isSaved ? '<i class="fa-solid fa-bookmark"></i> Saved' : '<i class="fa-regular fa-bookmark"></i> Save Job';
+    }
+  })();
+</script>
+</body>
+</html>
